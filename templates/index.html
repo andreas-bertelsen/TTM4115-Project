@@ -3,11 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
-    <title>Semester Project</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>E-Scooter Booking</title>
+    <script>
+        async function initMap() {
+            const map = L.map('map').setView([63.4305, 10.3951], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const customIcon = L.icon({
+                iconUrl: '{{ url_for("static", path="/images/electric-scooter.png") }}',
+                iconSize: [40, 40], // size of the icon
+                iconAnchor: [12, 41], // point of the icon which will correspond to marker's location
+                popupAnchor: [1, -34] // point from which the popup should open relative to the iconAnchor
+            });
+
+            try {
+                const response = await fetch('/scooter-locations');
+                const markers = await response.json();
+
+                markers.forEach(marker => {
+                    const mapMarker = L.marker([marker.lat, marker.lng], { icon: customIcon }).addTo(map);
+
+                    mapMarker.on('click', async () => {
+                        try {
+                            const infoResponse = await fetch(`/scooter-data?id=${marker.id}`);
+                            const data = await infoResponse.json();
+
+                            if (data.error) {
+                                console.error(data.error);
+                                return;
+                            }
+
+                            const popupContent = `
+                                <strong>Scooter Info:</strong><br>
+                                Number: ${data.id}<br>
+                                Battery: ${data.battery}<br>
+                                Status: ${data.isBooked ? 'Booked' : 'Available'}<br>
+                                ${data.isBooked ? '' : `<br><a href="/booking?id=${data.id}" class="popup-button">Book</a>`}
+                            `;
+
+                            mapMarker.bindPopup(popupContent).openPopup();
+                        } catch (error) {
+                            console.error('Error fetching marker info:', error);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error fetching markers:', error);
+            }
+        }
+    </script>
 </head>
-<body>
-    <h1>Welcome to the Semester Project</h1>
-    <p>This is the homepage.</p>
+<body onload="initMap()">
+    <header>
+        <h1>Welcome to Tech Titans E-Scooters</h1>
+        <nav>
+            <a href="/" class="nav-button">Home</a>
+            <a href="/feedback" class="nav-button">Feedback</a>
+        </nav>
+    </header>
+    <main>
+        <p>Please select an e-scooter:</p>
+        <div id="map">Map loading...</div>
+    </main>
 </body>
 </html>

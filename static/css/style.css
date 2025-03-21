@@ -4,6 +4,115 @@ body {
     background-color: #f4f4f4;
 }
 
+header {
+    background-color: #333;
+    color: white;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 20px;
+    float: left;
+    padding: 10px;
+}
+
+nav {
+    margin-top: 5px;
+    float: right;
+    padding: 10px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+#map {
+    border: 1px solid #ccc;
+    background-color: #eaeaea;
+    height: 70vh;
+    width: 80%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 h1 {
     font-size: 24px;
+}
+
+form {
+    margin: 20px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    width: 350px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    border-radius: 4px;
+}
+
+form label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+form input, form textarea, form button {
+    width: 90%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+form button {
+    background-color: #333;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #555;
+}
+
+form textarea {
+    resize: none;
+}
+
+.nav-button {
+    background-color: #333;
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+.nav-button:hover {
+    background-color: #555;
+}
+
+.popup-button {
+    background-color: #333;
+    color: white;
+    text-decoration: none;
+    padding: 5px 5px;
+    border-radius: 4px;
+}
+
+.popup-button:link {
+    color: white;
+}
+
+.popup-button:hover {
+    background-color: #555;
 }
