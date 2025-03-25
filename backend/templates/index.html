@@ -27,7 +27,10 @@
                 const markers = await response.json();
 
                 markers.forEach(marker => {
-                    const mapMarker = L.marker([marker.lat, marker.lng], { icon: customIcon }).addTo(map);
+                    const mapMarker = L.marker([marker.lat, marker.lng], {
+                        icon: customIcon,
+                        opacity: marker.isBooked ? 0.65 : 1.0 
+                    }).addTo(map);
 
                     mapMarker.on('click', async () => {
                         try {

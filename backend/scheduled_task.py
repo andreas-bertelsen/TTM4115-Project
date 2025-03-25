@@ -32,8 +32,10 @@ async def lifespan(app: FastAPI):
                 booking_id, scooter_id, expires_at = booking
 
                 # Convert expires_at to timezone-aware datetime
-                expires_at_dt = datetime.strptime(expires_at, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=pytz.UTC).astimezone(TIMEZONE)
-                if expires_at_dt < datetime.now(TIMEZONE):
+                expires_at_dt = TIMEZONE.localize(datetime.strptime(expires_at, "%Y-%m-%d %H:%M:%S"))
+                time_now = TIMEZONE.localize(datetime.strptime(datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"))
+
+                if expires_at_dt < time_now:
                     try:
                         cursor.execute("BEGIN TRANSACTION")
                         cursor.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))

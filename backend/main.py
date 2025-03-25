@@ -12,7 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from itsdangerous import URLSafeSerializer
 
 from db_setup import initialize_database, DATABASE
-from scheduled_task import lifespan, TIMEZONE
+from scheduled_task import lifespan
+
+TIMEZONE = pytz.timezone("Europe/Oslo")
 
 # FastAPI setup
 app = FastAPI(lifespan=lifespan)
@@ -20,11 +22,14 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Add custom Jinja2 filters
-def datetimeformat(value):
+def datetimeformat(value: str) -> str:
     return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").strftime("%d %b %Y, %H:%M")
 
-def capitalize(value):
+def capitalize(value: str) -> str:
     return value.capitalize()
+
+templates.env.filters['datetimeformat'] = datetimeformat
+templates.env.filters['capitalize'] = capitalize
 
 # Session setup using itsdangerous
 SECRET_KEY = secrets.token_urlsafe(32)
@@ -35,8 +40,6 @@ mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqtt_broker = "mqtt.item.ntnu.no"
 mqtt_port = 1883
 mqtt_client.connect(mqtt_broker, mqtt_port)
-
-templates.env.filters['datetimeformat'] = datetimeformat
 
 @app.get("/")
 def read_root(request: Request):
@@ -198,8 +201,8 @@ def submit_feedback(
 def get_markers():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, lat, lng FROM scooters")
-    data = [{"id": row[0], "lat": row[1], "lng": row[2]} for row in cursor.fetchall()]
+    cursor.execute("SELECT id, lat, lng, isBooked FROM scooters")
+    data = [{"id": row[0], "lat": row[1], "lng": row[2], "isBooked": row[3]} for row in cursor.fetchall()]
     conn.close()
     return JSONResponse(content=data)
 
