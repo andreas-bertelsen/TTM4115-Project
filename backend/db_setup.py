@@ -12,7 +12,7 @@ def initialize_database():
     cursor.execute("DROP TABLE IF EXISTS feedback")
     cursor.execute("DROP TABLE IF EXISTS scooters")
     cursor.execute("DROP TABLE IF EXISTS users")
-    cursor.execute("DROP TABLE IF EXISTS bookings")  # New table for bookings
+    cursor.execute("DROP TABLE IF EXISTS bookings")
 
     # Create tables
     cursor.execute("""
@@ -65,9 +65,9 @@ def initialize_database():
         INSERT OR IGNORE INTO users (username, password, email, is_admin)
         VALUES ('admin', 'admin123', 'admin@ntnu.no', 1)
     """)
-    for i in range(20):
-        lat = 63.422 + (random.random() - 0.5) * 0.03
-        lng = 10.395 + (random.random() - 0.5) * 0.04
+    for i in range(30):
+        lat = 63.422 + (random.random() - 0.5) * 0.02
+        lng = 10.395 + (random.random() - 0.5) * 0.08
         battery = random.randint(30, 100)
         cursor.execute("""
             INSERT OR IGNORE INTO scooters (lat, lng, battery)

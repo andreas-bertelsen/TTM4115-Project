@@ -1,14 +1,13 @@
 import secrets
 from datetime import datetime, timedelta
 
-import paho.mqtt.client as mqtt
 import pytz
 import sqlite3
 import uvicorn
 from fastapi import FastAPI, Form, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
 from db_setup import initialize_database, DATABASE
@@ -35,11 +34,14 @@ templates.env.filters['capitalize'] = capitalize
 SECRET_KEY = secrets.token_urlsafe(32)
 serializer = URLSafeSerializer(SECRET_KEY)
 
-# MQTT setup
-mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-mqtt_broker = "mqtt.item.ntnu.no"
-mqtt_port = 1883
-mqtt_client.connect(mqtt_broker, mqtt_port)
+def get_session(request: Request):
+    session_token = request.cookies.get("session")
+    if session_token:
+        try:
+            return serializer.loads(session_token)
+        except Exception:
+            return {}
+    return {}
 
 @app.get("/")
 def read_root(request: Request):
@@ -111,15 +113,6 @@ def logout():
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("session")
     return response
-
-def get_session(request: Request):
-    session_token = request.cookies.get("session")
-    if session_token:
-        try:
-            return serializer.loads(session_token)
-        except Exception:
-            return {}
-    return {}
 
 @app.get("/bookings")
 def view_bookings(request: Request):

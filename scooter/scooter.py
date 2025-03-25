@@ -1,88 +1,124 @@
-from sense_hat import SenseHat
 import time
-import math
-import os
+import threading
 
-# Initialize Sense HAT
-sense = SenseHat()
-sense.set_imu_config(True, True, True)  # Enable gyroscope and accelerometer
+from paho.mqtt.client import Client
+from stmpy import Machine, Driver
 
-# Constants
-IMPACT_THRESHOLD = 5.0  # G-force threshold for an impact
-SPEED_SENSITIVITY = 0.1  # Adjust based on expected scooter acceleration
-ALERT_DURATION = 3       # Duration to display alert in seconds
+from mqtt_handler import MQTT_Client, MQTT_BROKER, MQTT_PORT
+from sense_hat_utils import BlinkAndWaitThread, detect_impact, check_orientation, set_led_matrix, GREEN, RED
 
-# Colors
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
+class ScooterLogic:
+    def __init__(self):
+        self.stm: Machine = None
+        self.mqtt_client: Client = None
+        self.driver: Driver = None
 
-# Variables for speed estimation
-prev_time = time.time()
-speed = 0  # Estimated speed in arbitrary units
+    def lock(self):
+        """ Lock the scooter. """
+        print("Scooter locked.")
+        set_led_matrix(RED)
 
-def get_acceleration():
-    """ Get the acceleration vector magnitude. """
-    accel = sense.get_accelerometer_raw()
-    ax, ay, az = accel['x'], accel['y'], accel['z']
-    magnitude = math.sqrt(ax**2 + ay**2 + az**2)
-    return magnitude, ax, ay, az
+    def unlock(self):
+        """ Unlock the scooter. """
+        print("Scooter unlocked.")
+        set_led_matrix(GREEN)
 
-def get_gyro():
-    """ Get gyroscope data (angular velocity). """
-    gyro = sense.get_gyroscope()
-    return gyro['roll'], gyro['pitch'], gyro['yaw']
+    def add_fare(self):
+        """ Add fare when the ride ends. """
+        print("Fare added.")
 
-def estimate_speed():
-    """ Estimate speed using acceleration over time (basic integration). """
-    global prev_time, speed
-    magnitude, _, _, _ = get_acceleration()
+    def publish_msg(self, msg, topic):
+        """ Publish a message to MQTT. """
+        print(f"Publishing message: '{msg}' to topic: '{topic}'")
+        self.mqtt_client.publish(topic, msg)
+
+    def monitor_collision(self):
+        """ Monitor for collisions and handle state transitions. """
+        while True:
+            impact, _ = detect_impact()
+            if impact and self.stm.state == 'Active':
+                self.stm.send('collision')
+            time.sleep(0.01)
+
+    def check_orientation_stop(self):
+        """ Check the orientation of the scooter. """
+        orientation = check_orientation()
+        if orientation == RED:
+            self.add_fare()
+        return "Idle"
     
-    # Time difference
-    current_time = time.time()
-    delta_time = current_time - prev_time
-    prev_time = current_time
+    def check_orientation_collision(self):
+        """ Check the orientation of the scooter after a collision. """
+        orientation = check_orientation()
+        if orientation == GREEN:
+            return "Active"
+        return "Collision_detected"
+    
+    def handle_collision_response(self):
+        """ Handle the collision response logic. """
+        blink_thread = BlinkAndWaitThread(timeout=120)
+        blink_thread.start()
+        blink_thread.join()  # Wait for the thread to finish
 
-    # Approximate speed using acceleration (simplified)
-    speed += magnitude * SPEED_SENSITIVITY * delta_time
-    return round(speed, 2)
+        set_led_matrix(RED)
 
-def detect_impact():
-    """ Detect sudden impact based on acceleration changes. """
-    magnitude, _, _, _ = get_acceleration()
-    if magnitude > IMPACT_THRESHOLD:
-        return True, magnitude
-    return False, magnitude
+        if blink_thread.clicked:
+            print("User acknowledged collision.")
+            self.publish_msg("collision_acknowledged", "scooter1/status")
+        else:
+            print("No user response to collision.")
+            self.publish_msg("collision_no_response", "scooter1/status")
 
-def alert_user(message, color):
-    """ Display an alert on the Sense HAT LED matrix. """
-    sense.show_message(message, text_colour=color)
-    # (Optional) Play a buzzer sound if a buzzer is attached
-    os.system("play -n synth 0.3 sine 440")  # Requires `sox` package
+# State Machine Definition
+def create_state_machine(scooter_logic: ScooterLogic):
+    t0 = {'source': 'initial', 'target': 'Idle'}
+    t1 = {'source': 'Idle', 'trigger': 'start', 'target': 'Active', 'effect': 'unlock(); publish_msg("booked", "scooter1/status")'}
+    t2 = {'source': 'Active', 'trigger': 'stop', 'function': scooter_logic.check_orientation_stop}
+    t3 = {'source': 'Collision_detected', 'trigger': 'service_checked', 'target': 'Idle'}
+    t4 = {'source': 'Active', 'trigger': 'collision', 'function': scooter_logic.check_orientation_collision}
+
+    states = [
+        {'name': 'Idle', 'entry': 'lock()', 'collision': 'defer', 'stop': 'defer', 'service_checked': 'defer'},
+        {'name': 'Active', 'start': 'defer', 'service_checked': 'defer'},
+        {'name': 'Collision_detected', 
+         'entry': 'lock(); publish_msg("collision", "scooter1/status"); handle_collision_response()', 
+         'collision': 'defer', 'start': 'defer', 'stop': 'defer'}
+    ]
+
+    return Machine(name='scooter', transitions=[t0, t1, t2, t3, t4], obj=scooter_logic, states=states)
 
 def main():
-    print("Monitoring speed and impacts...")
-    while True:
-        try:
-            speed = estimate_speed()
-            impact, impact_value = detect_impact()
+    # State Machine Setup
+    scooter = ScooterLogic()
+    stm = create_state_machine(scooter)
+    scooter.stm = stm
 
-            # Display speed on LED matrix
-            sense.clear(GREEN if speed < 10 else YELLOW)
-            print(f"Speed: {speed} | Impact: {impact_value:.2f}")
+    # Driver Setup
+    driver = Driver()
+    driver.add_machine(stm)
+    scooter.driver = driver
 
-            # Impact alert
-            if impact:
-                print("!!! Impact detected !!!")
-                alert_user("IMPACT!", RED)
-                time.sleep(ALERT_DURATION)
+    # MQTT Setup
+    mqtt_client = MQTT_Client()
+    scooter.mqtt_client = mqtt_client.client
+    mqtt_client.stm_driver = driver
 
-            time.sleep(0.5)
+    # Start the system
+    driver.start()
+    mqtt_client.start(MQTT_BROKER, MQTT_PORT)
 
-        except KeyboardInterrupt:
-            print("Stopping monitoring...")
-            sense.clear()
-            break
+    # Start collision monitoring in a separate thread
+    collision_thread = threading.Thread(target=scooter.monitor_collision, daemon=True)
+    collision_thread.start()
+
+    print("Scooter system is running. Press Ctrl+C to stop.")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        print("Stopping system...")
+        set_led_matrix(None)
+        driver.stop()
+        mqtt_client.client.disconnect()
 
 if __name__ == "__main__":
     main()
