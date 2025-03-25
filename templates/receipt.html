@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <title>Receipt</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-left">
+                <a href="/" class="nav-logo">
+                    <img src="{{ url_for('static', path='/images/electric-scooter.png') }}" alt="Home" class="nav-logo-img">
+                    <span class="nav-logo-text">Tech Titans</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="/" class="nav-button">Home</a>
+                <a href="/feedback" class="nav-button">Feedback</a>
+                <div class="dropdown">
+                    <button class="dropbtn">{{ session['username'] }}</button>
+                    <div class="dropdown-content">
+                        <a href="/bookings">My Bookings</a>
+                        <a href="/logout">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <h1>Ride Receipt</h1>
+        <div class="booking-card">
+            <p><strong>Scooter ID:</strong> {{ scooter_id }}</p>
+            <p><strong>Ride Duration:</strong> {{ duration }}</p>
+            <p><strong>Total Cost:</strong> {{ cost }}</p>
+            <form method="post" action="/feedback" class="inline-form">
+                <input type="hidden" name="scooter_id" value="{{ scooter_id }}">
+                <button type="submit" class="btn btn-green">Give Feedback</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

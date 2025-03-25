@@ -10,7 +10,7 @@
     <title>E-Scooter Booking</title>
     <script>
         async function initMap() {
-            const map = L.map('map').setView([63.4305, 10.3951], 14);
+            const map = L.map('map').setView([63.422, 10.395], 14);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
@@ -42,9 +42,14 @@
                             const popupContent = `
                                 <strong>Scooter Info:</strong><br>
                                 Number: ${data.id}<br>
-                                Battery: ${data.battery}<br>
+                                Battery: ${data.battery}%<br>
                                 Status: ${data.isBooked ? 'Booked' : 'Available'}<br>
-                                ${data.isBooked ? '' : `<br><a href="/booking?id=${data.id}" class="popup-button">Book</a>`}
+                                ${data.isBooked ? '' : `
+                                    <form method="post" action="/book-scooter" class="popup-form">
+                                        <input type="hidden" name="scooter_id" value="${data.id}">
+                                        <button type="submit">Book</button>
+                                    </form>
+                                `}
                             `;
 
                             mapMarker.bindPopup(popupContent).openPopup();
@@ -61,14 +66,35 @@
 </head>
 <body onload="initMap()">
     <header>
-        <h1>Welcome to Tech Titans E-Scooters</h1>
         <nav>
-            <a href="/" class="nav-button">Home</a>
-            <a href="/feedback" class="nav-button">Feedback</a>
+            <div class="nav-left">
+                <a href="/" class="nav-logo">
+                    <img src="{{ url_for('static', path='/images/electric-scooter.png') }}" alt="Home" class="nav-logo-img">
+                    <span class="nav-logo-text">Tech Titans</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="/" class="nav-button">Home</a>
+                {% if 'username' in session %}
+                <a href="/feedback" class="nav-button">Feedback</a>
+                <div class="dropdown">
+                    <button class="dropbtn">{{ session['username'] }}</button>
+                    <div class="dropdown-content">
+                        <a href="/bookings">My Bookings</a>
+                        <a href="/logout">Logout</a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="/login" class="nav-button">Login</a>
+                {% endif %}
+            </div>
         </nav>
     </header>
     <main>
-        <p>Please select an e-scooter:</p>
+        <h1>Please select an e-scooter:</h1>
+        {% if error %}
+        <p class="error-message">{{ error }}</p>
+        {% endif %}
         <div id="map">Map loading...</div>
     </main>
 </body>

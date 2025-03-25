@@ -7,10 +7,13 @@ body {
 header {
     background-color: #333;
     color: white;
-    padding: 10px 0;
+    padding: 10px 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 80px;
+    box-sizing: border-box;
+    border-radius: 4px;
 }
 
 header h1 {
@@ -21,9 +24,23 @@ header h1 {
 }
 
 nav {
-    margin-top: 5px;
-    float: right;
-    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
 }
 
 nav a {
@@ -89,30 +106,256 @@ form textarea {
 }
 
 .nav-button {
-    background-color: #333;
-    color: white;
+    padding: 0 15px;
     text-decoration: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    margin-left: 10px;
+    color: white;
+    background-color: transparent;
+    border-radius: 5px;
+    margin-right: 10px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    height: 40px;
+    font-size: 16px;
+    line-height: 40px;
+    display: inline-block;
+    text-align: center;
 }
 
 .nav-button:hover {
-    background-color: #555;
-}
-
-.popup-button {
-    background-color: #333;
+    background-color: rgba(255, 255, 255, 0.1);
     color: white;
     text-decoration: none;
-    padding: 5px 5px;
-    border-radius: 4px;
 }
 
-.popup-button:link {
+.popup-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+.popup-form input[type="hidden"] {
+    display: none;
+}
+
+.popup-form button {
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.popup-form button:hover {
+    background-color: #555;
+}
+
+.dropdown {
+    display: inline-block;
+    position: relative;
+}
+
+.dropbtn {
+    background-color: transparent;
+    color: white;
+    padding: 10px 15px;
+    padding-right: 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: default;
+    margin-right: 10px;
+    margin-left: 10px;
+    font-size: 16px;
+    width: auto;
+    height: 40px;
+    line-height: 1;
+    font-weight: bold;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    position: relative;
+}
+
+.dropbtn::after {
+    content: "▼";
+    font-size: 12px;
+    color: white;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    transition: color 0.3s ease;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    min-width: fit-content;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    right: 0;
+    padding: 0;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.dropdown-content a {
+    color: white;
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    text-align: left;
+    transition: background-color 0.3s ease;
+}
+
+.dropdown-content a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul li {
+    background-color: #fff;
+    margin: 10px auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 80%;
+    text-align: left;
+}
+
+.error-message {
+    color: #d9534f;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin: 10px 0;
+    text-align: center;
+    max-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+    text-decoration: none;
+}
+
+.nav-logo-img {
+    height: 40px;
+    width: auto;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.nav-logo-img:hover {
+    transform: scale(1.1);
+}
+
+.nav-logo-text {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    margin-left: 10px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.bookings-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.booking-card {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: 300px;
+    text-align: left;
+    margin: 20px auto;
+}
+
+.booking-card h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.booking-card p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.booking-card .btn {
+    display: block;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.booking-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+    margin: 0 auto;
+    text-decoration: none;
+}
+
+.btn-green {
+    background-color: #28a745;
     color: white;
 }
 
-.popup-button:hover {
-    background-color: #555;
+.btn-green:hover {
+    background-color: #218838;
+}
+
+.btn-red {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-red:hover {
+    background-color: #c82333;
+}
+
+.inline-form {
+    display: inline;
+    margin: 0 auto;
+    padding: 0;
+    border: none;
+    text-align: center;
 }

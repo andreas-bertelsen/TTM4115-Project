@@ -3,33 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
     <title>Feedback</title>
 </head>
 <body>
     <header>
-        <h1>Feedback Form</h1>
         <nav>
-            <a href="/" class="nav-button">Home</a>
-            <a href="/feedback" class="nav-button">Feedback</a>
+            <div class="nav-left">
+                <a href="/" class="nav-logo">
+                    <img src="{{ url_for('static', path='/images/electric-scooter.png') }}" alt="Home" class="nav-logo-img">
+                    <span class="nav-logo-text">Tech Titans</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="/" class="nav-button">Home</a>
+                <a href="/feedback" class="nav-button">Feedback</a>
+                <div class="dropdown">
+                    <button class="dropbtn">{{ session['username'] }}</button>
+                    <div class="dropdown-content">
+                        <a href="/bookings">My Bookings</a>
+                        <a href="/logout">Logout</a>
+                    </div>
+                </div>
+            </div>
         </nav>
     </header>
     <div style="clear: both;"></div>
     <main>
-        <form action="/submit-feedback" method="post">
+        <h1>Feedback</h1>
+        <form method="post" action="/submit-feedback">
             <label for="name">Name:</label>
             <input type="text" id="name" name="name" required>
-            <br>
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" required>
-            <br>
-            <label for="rating">Rating (1-5):</label>
+            <label for="scooter_id">Scooter ID (optional):</label>
+            <input type="text" id="scooter_id" name="scooter_id" value="{{ scooter_id or '' }}">
+            <label for="rating">Rating:</label>
             <input type="number" id="rating" name="rating" min="1" max="5" required>
-            <br>
             <label for="comments">Comments:</label>
-            <textarea id="comments" name="comments" rows="4" required></textarea>
-            <br>
-            <button type="submit">Submit Feedback</button>
+            <textarea id="comments" name="comments"></textarea>
+            <button type="submit">Submit</button>
         </form>
     </main>
 </body>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <title>My Bookings</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-left">
+                <a href="/" class="nav-logo">
+                    <img src="{{ url_for('static', path='/images/electric-scooter.png') }}" alt="Home" class="nav-logo-img">
+                    <span class="nav-logo-text">Tech Titans</span>
+                </a>
+            </div>
+            <div class="nav-right">
+                <a href="/" class="nav-button">Home</a>
+                <a href="/feedback" class="nav-button">Feedback</a>
+                <div class="dropdown">
+                    <button class="dropbtn">{{ session['username'] }}</button>
+                    <div class="dropdown-content">
+                        <a href="/bookings">My Bookings</a>
+                        <a href="/logout">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <h1>Your Bookings</h1>
+        {% if error %}
+        <p class="error-message">{{ error }}</p>
+        {% endif %}
+        <div class="bookings-container">
+            {% for booking in bookings %}
+            <div class="booking-card">
+                <h2>Scooter ID: {{ booking.scooter_id }}</h2>
+                <p>Status: <strong>{{ booking.status | capitalize }}</strong></p>
+                <p>Battery: {{ booking.battery }}%</p>
+                {% if booking.status != 'active' %}
+                <p>Expires At: {{ booking.expires_at | datetimeformat }}</p>
+                {% endif %}
+                <div class="booking-actions">
+                    {% if booking.status == 'pending' %}
+                    <form method="post" action="/activate-booking" class="inline-form">
+                        <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                        <button type="submit" class="btn btn-green">Activate</button>
+                    </form>
+                    <form method="post" action="/delete-booking" class="inline-form">
+                        <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                        <button type="submit" class="btn btn-red">Cancel</button>
+                    </form>
+                    {% elif booking.status == 'active' %}
+                    <form method="post" action="/delete-booking" class="inline-form">
+                        <input type="hidden" name="booking_id" value="{{ booking.id }}">
+                        <button type="submit" class="btn btn-red">Stop</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</body>
+</html>
