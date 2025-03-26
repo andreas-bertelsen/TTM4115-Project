@@ -12,6 +12,8 @@ from itsdangerous import URLSafeSerializer
 
 from db_setup import initialize_database, DATABASE
 from scheduled_task import lifespan
+from mqtt_handler import send_command
+import asyncio
 
 TIMEZONE = pytz.timezone("Europe/Oslo")
 
@@ -255,7 +257,7 @@ def book_scooter(request: Request, scooter_id: int = Form(...)):
     return RedirectResponse("/bookings", status_code=303)
 
 @app.post("/activate-booking")
-def activate_booking(request: Request, booking_id: int = Form(...)):
+async def activate_booking(request: Request, booking_id: int = Form(...)):
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -266,7 +268,7 @@ def activate_booking(request: Request, booking_id: int = Form(...)):
 
     # Activate the booking if it is still valid
     cursor.execute("""
-        SELECT expires_at FROM bookings
+        SELECT expires_at, scooter_id FROM bookings
         WHERE id = ? AND user_id = ? AND status = 'pending'
     """, (booking_id, user_id))
     booking = cursor.fetchone()
@@ -276,6 +278,7 @@ def activate_booking(request: Request, booking_id: int = Form(...)):
 
     expires_at = TIMEZONE.localize(datetime.strptime(booking[0], "%Y-%m-%d %H:%M:%S"))
     activated_at = TIMEZONE.localize(datetime.strptime(datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"))
+    scooter_id = booking[1]
 
     # Compare expires_at with the current time
     if expires_at < activated_at:
@@ -290,16 +293,21 @@ def activate_booking(request: Request, booking_id: int = Form(...)):
             WHERE id = ?
         """, (activated_at.strftime("%Y-%m-%d %H:%M:%S"), booking_id))
         conn.commit()
+
+        # Send MQTT start command
+        response = await send_command(scooter_id, "start")
+        if response != "activated":
+            raise Exception("Failed to activate scooter via MQTT")
     except Exception as e:
         conn.rollback()
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": "Failed to activate booking", "session": session})
+        return templates.TemplateResponse("bookings.html", {"request": request, "error": str(e), "session": session})
 
     conn.close()
     return RedirectResponse("/bookings", status_code=303)
 
 @app.post("/delete-booking")
-def delete_booking(request: Request, booking_id: int = Form(...)):
+async def delete_booking(request: Request, booking_id: int = Form(...)):
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -325,10 +333,16 @@ def delete_booking(request: Request, booking_id: int = Form(...)):
         cursor.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
         cursor.execute("UPDATE scooters SET isBooked = 0 WHERE id = ?", (scooter_id,))
         conn.commit()
+
+        # Send MQTT stop command if the booking was active
+        if status == "active":
+            response = await send_command(scooter_id, "stop")
+            if response != "parked":
+                raise Exception("Failed to stop scooter via MQTT")
     except Exception as e:
         conn.rollback()
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": "Failed to delete booking", "session": session})
+        return templates.TemplateResponse("bookings.html", {"request": request, "error": str(e), "session": session})
 
     conn.close()
 

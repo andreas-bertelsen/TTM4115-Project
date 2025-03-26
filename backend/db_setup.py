@@ -14,6 +14,9 @@ def initialize_database():
     cursor.execute("DROP TABLE IF EXISTS users")
     cursor.execute("DROP TABLE IF EXISTS bookings")
 
+    # Enable foreign key constraints
+    cursor.execute("PRAGMA foreign_keys = ON")
+
     # Create tables
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
@@ -65,7 +68,7 @@ def initialize_database():
         INSERT OR IGNORE INTO users (username, password, email, is_admin)
         VALUES ('admin', 'admin123', 'admin@ntnu.no', 1)
     """)
-    for i in range(30):
+    for i in range(1):
         lat = 63.422 + (random.random() - 0.5) * 0.02
         lng = 10.395 + (random.random() - 0.5) * 0.08
         battery = random.randint(30, 100)
