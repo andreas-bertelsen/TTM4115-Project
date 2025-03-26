@@ -1,6 +1,5 @@
 import math
 import time
-import threading
 
 from sense_hat import SenseHat
 
@@ -9,7 +8,7 @@ sense = SenseHat()
 sense.set_imu_config(True, False, False)  # Use only accelerometer
 
 # Constants
-IMPACT_THRESHOLD = 2.0  # Adjust for sensitivity
+IMPACT_THRESHOLD = 2.5  # Adjust for sensitivity
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
@@ -33,7 +32,6 @@ def check_orientation():
     roll = (roll + 180) % 360 - 180
     pitch = (pitch + 180) % 360 - 180
 
-    print(f"Roll: {roll:.2f} | Pitch: {pitch:.2f}")
     if abs(roll) < 10 and abs(pitch) < 10:  
         return GREEN  # Upright
     elif abs(roll) < 30 and abs(pitch) < 30:  
@@ -55,23 +53,12 @@ def blink_red():
     sense.clear()
     time.sleep(0.2)
 
-class BlinkAndWaitThread(threading.Thread):
-    """ Thread to handle blinking and waiting for joystick input. """
-    def __init__(self, timeout=120):
-        super().__init__()
-        self.timeout = timeout
-        self.clicked = False
-        self._stop_event = threading.Event()
-
-    def run(self):
-        start_time = time.time()
-        while time.time() - start_time < self.timeout and not self._stop_event.is_set():
-            blink_red()
-            events = sense.stick.get_events()
-            if any(event.action == "pressed" for event in events):
-                self.clicked = True
-                break
-
-    def stop(self):
-        """ Stop the blinking thread. """
-        self._stop_event.set()
+def blink_and_wait(timeout=120):
+    """ Blink the LED matrix red and wait for joystick input. """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        blink_red()
+        events = sense.stick.get_events()
+        if any(event.action == "pressed" for event in events):
+            return True
+    return False
