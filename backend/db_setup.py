@@ -33,7 +33,8 @@ def initialize_database():
         lat REAL NOT NULL,
         lng REAL NOT NULL,
         battery INTEGER NOT NULL,
-        isBooked BOOLEAN NOT NULL DEFAULT 0
+        isBooked BOOLEAN NOT NULL DEFAULT 0,
+        needs_fixing BOOLEAN NOT NULL DEFAULT 0
     )
     """)
     cursor.execute("""
@@ -68,7 +69,7 @@ def initialize_database():
         INSERT OR IGNORE INTO users (username, password, email, is_admin)
         VALUES ('admin', 'admin123', 'admin@ntnu.no', 1)
     """)
-    for i in range(1):
+    for i in range(30):
         lat = 63.422 + (random.random() - 0.5) * 0.02
         lng = 10.395 + (random.random() - 0.5) * 0.08
         battery = random.randint(30, 100)

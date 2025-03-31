@@ -19,10 +19,16 @@
             <div class="nav-right">
                 <a href="/" class="nav-button">Home</a>
                 <a href="/feedback" class="nav-button">Feedback</a>
+                {% if session.is_admin %}
+                <a href="/bookings" class="nav-button">Bookings</a>
+                <a href="/admin/maintenance" class="nav-button">Maintenance</a>
+                {% endif %}
                 <div class="dropdown">
                     <button class="dropbtn">{{ session['username'] }}</button>
                     <div class="dropdown-content">
+                        {% if not session.is_admin %}
                         <a href="/bookings">My Bookings</a>
+                        {% endif %}
                         <a href="/logout">Logout</a>
                     </div>
                 </div>
@@ -40,6 +46,9 @@
                 <h2>Scooter ID: {{ booking.scooter_id }}</h2>
                 <p>Status: <strong>{{ booking.status | capitalize }}</strong></p>
                 <p>Battery: {{ booking.battery }}%</p>
+                {% if session.is_admin %}
+                <p>Username: {{ booking.username }}</p>
+                {% endif %}
                 {% if booking.status != 'active' %}
                 <p>Expires At: {{ booking.expires_at | datetimeformat }}</p>
                 {% endif %}

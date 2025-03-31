@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
-    <title>Receipt</title>
+    <title>Scooters Needing Fix</title>
 </head>
 <body>
     <header>
@@ -36,15 +36,19 @@
         </nav>
     </header>
     <main>
-        <h1>Ride Receipt</h1>
-        <div class="booking-card">
-            <p><strong>Scooter ID:</strong> {{ scooter_id }}</p>
-            <p><strong>Ride Duration:</strong> {{ duration }}</p>
-            <p><strong>Total Cost:</strong> {{ cost }}</p>
-            <form method="post" action="/feedback" class="inline-form">
-                <input type="hidden" name="scooter_id" value="{{ scooter_id }}">
-                <button type="submit" class="btn btn-green">Give Feedback</button>
-            </form>
+        <h1>Scooter Maintenance</h1>
+        <div class="bookings-container">
+            {% for scooter in scooters %}
+            <div class="booking-card">
+                <h2>Scooter ID: {{ scooter.id }}</h2>
+                <p>Battery: {{ scooter.battery }}%</p>
+                <p>Location: ({{ scooter.lat }}, {{ scooter.lng }})</p>
+                <form method="post" action="/admin/fix-scooter" class="inline-form">
+                    <input type="hidden" name="scooter_id" value="{{ scooter.id }}">
+                    <button type="submit" class="btn btn-green">Fix</button>
+                </form>
+            </div>
+            {% endfor %}
         </div>
     </main>
 </body>

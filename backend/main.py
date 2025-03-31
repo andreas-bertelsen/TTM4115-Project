@@ -13,7 +13,6 @@ from itsdangerous import URLSafeSerializer
 from db_setup import initialize_database, DATABASE
 from scheduled_task import lifespan
 from mqtt_handler import send_command
-import asyncio
 
 TIMEZONE = pytz.timezone("Europe/Oslo")
 
@@ -61,12 +60,12 @@ def login_page(request: Request):
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ? AND password = ?", (username, password))
+    cursor.execute("SELECT id, is_admin FROM users WHERE username = ? AND password = ?", (username, password))
     user = cursor.fetchone()
     conn.close()
 
     if user:
-        session_token = serializer.dumps({"username": username, "user_id": user[0]})
+        session_token = serializer.dumps({"username": username, "user_id": user[0], "is_admin": bool(user[1])})
         response = RedirectResponse("/", status_code=303)
         response.set_cookie("session", session_token)
         return response
@@ -122,29 +121,49 @@ def view_bookings(request: Request):
     if not session:
         return RedirectResponse("/login", status_code=303)
 
-    user_id = session["user_id"]
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # Fetch bookings for the logged-in user, including battery percentage
-    cursor.execute("""
-        SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery
-        FROM bookings b
-        JOIN scooters s ON b.scooter_id = s.id
-        WHERE b.user_id = ?
-    """, (user_id,))
-    bookings = [
-        {
-            "id": row[0],
-            "scooter_id": row[1],
-            "status": row[2],
-            "expires_at": row[3],
-            "battery": row[4]
-        }
-        for row in cursor.fetchall()
-    ]
-    conn.close()
+    if session.get("is_admin"):
+        # Fetch all bookings with usernames for admin
+        cursor.execute("""
+            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery, u.username
+            FROM bookings b
+            JOIN scooters s ON b.scooter_id = s.id
+            JOIN users u ON b.user_id = u.id
+        """)
+        bookings = [
+            {
+                "id": row[0],
+                "scooter_id": row[1],
+                "status": row[2],
+                "expires_at": row[3],
+                "battery": row[4],
+                "username": row[5]
+            }
+            for row in cursor.fetchall()
+        ]
+    else:
+        # Fetch bookings for the logged-in user
+        user_id = session["user_id"]
+        cursor.execute("""
+            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery
+            FROM bookings b
+            JOIN scooters s ON b.scooter_id = s.id
+            WHERE b.user_id = ?
+        """, (user_id,))
+        bookings = [
+            {
+                "id": row[0],
+                "scooter_id": row[1],
+                "status": row[2],
+                "expires_at": row[3],
+                "battery": row[4]
+            }
+            for row in cursor.fetchall()
+        ]
 
+    conn.close()
     return templates.TemplateResponse("bookings.html", {"request": request, "bookings": bookings, "session": session})
 
 @app.get("/feedback")
@@ -196,8 +215,17 @@ def submit_feedback(
 def get_markers():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, lat, lng, isBooked FROM scooters")
-    data = [{"id": row[0], "lat": row[1], "lng": row[2], "isBooked": row[3]} for row in cursor.fetchall()]
+    cursor.execute("SELECT id, lat, lng, isBooked, needs_fixing FROM scooters")
+    data = [
+        {
+            "id": row[0],
+            "lat": row[1],
+            "lng": row[2],
+            "isBooked": row[3],
+            "needsFixing": row[4]
+        }
+        for row in cursor.fetchall()
+    ]
     conn.close()
     return JSONResponse(content=data)
 
@@ -382,6 +410,37 @@ def receipt_page(request: Request, scooter_id: int = Form(...), duration: str = 
         "cost": cost,
         "session": session
     })
+
+@app.get("/admin/maintenance")
+def scooters_needing_fix(request: Request):
+    session = get_session(request)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse("/", status_code=303)
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, lat, lng, battery FROM scooters WHERE needs_fixing = 1")
+    scooters = [
+        {"id": row[0], "lat": row[1], "lng": row[2], "battery": row[3]}
+        for row in cursor.fetchall()
+    ]
+    conn.close()
+
+    return templates.TemplateResponse("maintenance.html", {"request": request, "scooters": scooters, "session": session})
+
+@app.post("/admin/fix-scooter")
+def fix_scooter(request: Request, scooter_id: int = Form(...)):
+    session = get_session(request)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse("/", status_code=303)
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE scooters SET needs_fixing = 0 WHERE id = ?", (scooter_id,))
+    conn.commit()
+    conn.close()
+
+    return RedirectResponse("/admin/maintenance", status_code=303)
 
 def main():
     initialize_database()

@@ -27,9 +27,14 @@
                 const markers = await response.json();
 
                 markers.forEach(marker => {
+                    // Skip scooters marked as needing fixing
+                    if (marker.needsFixing) {
+                        return;
+                    }
+
                     const mapMarker = L.marker([marker.lat, marker.lng], {
                         icon: customIcon,
-                        opacity: marker.isBooked ? 0.65 : 1.0 
+                        opacity: marker.isBooked ? 0.5 : 1.0 
                     }).addTo(map);
 
                     mapMarker.on('click', async () => {
@@ -80,10 +85,16 @@
                 <a href="/" class="nav-button">Home</a>
                 {% if 'username' in session %}
                 <a href="/feedback" class="nav-button">Feedback</a>
+                {% if session.is_admin %}
+                <a href="/bookings" class="nav-button">Bookings</a>
+                <a href="/admin/maintenance" class="nav-button">Maintenance</a>
+                {% endif %}
                 <div class="dropdown">
                     <button class="dropbtn">{{ session['username'] }}</button>
                     <div class="dropdown-content">
+                        {% if not session.is_admin %}
                         <a href="/bookings">My Bookings</a>
+                        {% endif %}
                         <a href="/logout">Logout</a>
                     </div>
                 </div>
@@ -94,7 +105,7 @@
         </nav>
     </header>
     <main>
-        <h1>Please select an e-scooter:</h1>
+        <h1>Please Select an E-scooter</h1>
         {% if error %}
         <p class="error-message">{{ error }}</p>
         {% endif %}
