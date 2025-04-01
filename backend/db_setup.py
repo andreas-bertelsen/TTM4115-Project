@@ -69,7 +69,12 @@ def initialize_database():
         INSERT OR IGNORE INTO users (username, password, email, is_admin)
         VALUES ('admin', 'admin123', 'admin@ntnu.no', 1)
     """)
-    for i in range(30):
+    cursor.execute("""
+        INSERT OR IGNORE INTO scooters (lat, lng, battery)
+        VALUES (63.422, 10.395, 100)
+    """)
+
+    for i in range(29):
         lat = 63.422 + (random.random() - 0.5) * 0.02
         lng = 10.395 + (random.random() - 0.5) * 0.08
         battery = random.randint(30, 100)

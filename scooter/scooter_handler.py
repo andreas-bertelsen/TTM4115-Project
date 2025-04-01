@@ -71,7 +71,7 @@ def create_state_machine(scooter_logic: ScooterLogic):
     t0 = {'source': 'initial', 'target': 'Idle'}
     t1 = {'source': 'Idle', 'trigger': 'start', 'target': 'Active', 'effect': 'unlock(); publish_msg("activated")'}
     t2 = {'source': 'Active', 'trigger': 'stop', 'function': scooter_logic.check_orientation_stop}
-    t3 = {'source': 'Collision_detected', 'trigger': 'service_checked', 'target': 'Idle'}
+    t3 = {'source': 'Collision_detected', 'trigger': 'service_checked', 'target': 'Idle', 'effect': 'publish_msg("parked")'}
     t4 = {'source': 'Active', 'trigger': 'collision', 'function': scooter_logic.check_orientation_collision}
 
     states = [

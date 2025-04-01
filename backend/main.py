@@ -513,20 +513,49 @@ def scooters_needing_fix(request: Request):
     ]
     conn.close()
 
-    return templates.TemplateResponse("maintenance.html", {"request": request, "scooters": scooters, "session": session})
+    # Retrieve the error message from the cookie (if it exists)
+    error = request.cookies.get("maintenance_error")
+
+    # Render the maintenance page with the error message
+    response = templates.TemplateResponse("maintenance.html", {
+        "request": request,
+        "scooters": scooters,
+        "session": session,
+        "error": error
+    })
+
+    # Clear the error cookie after retrieving it
+    response.delete_cookie("maintenance_error")
+
+    return response
 
 @app.post("/admin/fix-scooter")
-def fix_scooter(request: Request, scooter_id: int = Form(...)):
+async def fix_scooter(request: Request, scooter_id: int = Form(...)):
     session = get_session(request)
     if not session or not session.get("is_admin"):
         return RedirectResponse("/", status_code=303)
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("UPDATE scooters SET needs_fixing = 0 WHERE id = ?", (scooter_id,))
-    conn.commit()
-    conn.close()
 
+    try:
+        cursor.execute("BEGIN TRANSACTION")
+        cursor.execute("UPDATE scooters SET needs_fixing = 0 WHERE id = ?", (scooter_id,))
+
+        result = await send_command(scooter_id, "service_checked")
+        if result != "parked":
+            raise Exception("Failed to send service_checked command via MQTT")
+    
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+
+        response = RedirectResponse("/admin/maintenance", status_code=303)
+        response.set_cookie("maintenance_error", str(e))
+        return response
+    
+    conn.close()
     return RedirectResponse("/admin/maintenance", status_code=303)
 
 def main():
