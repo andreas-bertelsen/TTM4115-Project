@@ -440,7 +440,8 @@ async def delete_booking(request: Request, booking_id: int = Form(...)):
         # Send MQTT stop command if the booking was active
         if status == "active":
             response = await send_command(scooter_id, "stop")
-            if response not in ("parked", "parked_add_fare"):
+            print(f"Response from MQTT: {response}")
+            if response not in ("parked_normal_fare", "parked_increased_fare"):
                 raise Exception("Failed to stop scooter via MQTT")
             ride_finished = True
             
@@ -463,7 +464,7 @@ async def delete_booking(request: Request, booking_id: int = Form(...)):
         cost = duration_minutes * 2.5
         parking_fee = 0
 
-        if response == "parked_add_fare":
+        if response == "parked_increased_fare":
             parking_fee = 10
 
         # Render a form to submit the receipt data
@@ -484,7 +485,14 @@ async def delete_booking(request: Request, booking_id: int = Form(...)):
     return RedirectResponse("/bookings", status_code=303)
 
 @app.post("/receipt")
-def receipt_page(request: Request, scooter_id: int = Form(...), duration: str = Form(...), cost: str = Form(...)):
+def receipt_page(
+    request: Request,
+    scooter_id: int = Form(...),
+    duration: str = Form(...),
+    cost: str = Form(...),
+    parking_fee: str = Form(...),
+    total_cost: str = Form(...)
+):
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -494,6 +502,8 @@ def receipt_page(request: Request, scooter_id: int = Form(...), duration: str = 
         "scooter_id": scooter_id,
         "duration": duration,
         "cost": cost,
+        "parking_fee": parking_fee,
+        "total_cost": total_cost,
         "session": session
     })
 

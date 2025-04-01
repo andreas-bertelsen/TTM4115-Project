@@ -41,15 +41,14 @@ class ScooterLogic:
         """ Check the orientation of the scooter. """
         orientation = check_orientation()
         if orientation == RED:
-            self.publish_msg("parked_add_fare")
+            self.publish_msg("parked_increased_fare")
         else:
-            self.publish_msg("parked")
+            self.publish_msg("parked_normal_fare")
         return "Idle"
     
     def check_orientation_collision(self):
         """ Check the orientation of the scooter after a collision. """
         orientation = check_orientation()
-        print(f"Orientation after collision: {orientation}")
         if orientation == GREEN:
             return "Active"
         return "Collision_detected"

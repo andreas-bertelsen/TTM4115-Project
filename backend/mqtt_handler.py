@@ -67,8 +67,7 @@ async def send_command(scooter_id, command):
 
     # Wait for a response
     for _ in range(25):  # Wait up to 5 seconds
-        print(mqtt_responses)
-        if mqtt_responses.get(scooter_id) in ["activated", "parked"]:
+        if mqtt_responses.get(scooter_id) in ("activated", "parked", "parked_normal_fare", "parked_increased_fare"):
             response = mqtt_responses.pop(scooter_id)
             print(f"Received response: {response}")
             return response
