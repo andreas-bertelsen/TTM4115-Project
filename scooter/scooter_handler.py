@@ -23,10 +23,6 @@ class ScooterLogic:
         pretty_print("Scooter unlocked.", "SCOOTER")
         set_led_matrix(GREEN)
 
-    def add_fare(self):
-        """ Add fare when the ride ends. """
-        pretty_print("Fare added.", "SCOOTER")
-
     def publish_msg(self, msg):
         """ Publish a message to MQTT. """
         topic = f"team20/scooter/status/{self.scooter_id}"
@@ -45,7 +41,9 @@ class ScooterLogic:
         """ Check the orientation of the scooter. """
         orientation = check_orientation()
         if orientation == RED:
-            self.add_fare()
+            self.publish_msg("parked_add_fare")
+        else:
+            self.publish_msg("parked")
         return "Idle"
     
     def check_orientation_collision(self):
@@ -77,7 +75,7 @@ def create_state_machine(scooter_logic: ScooterLogic):
     t4 = {'source': 'Active', 'trigger': 'collision', 'function': scooter_logic.check_orientation_collision}
 
     states = [
-        {'name': 'Idle', 'entry': 'lock(); publish_msg("parked")'},
+        {'name': 'Idle', 'entry': 'lock()'},
         {'name': 'Active'},
         {'name': 'Collision_detected', 'entry': 'lock(); publish_msg("collision"); handle_collision_response()'}
     ]

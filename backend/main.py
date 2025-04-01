@@ -44,172 +44,25 @@ def get_session(request: Request):
             return {}
     return {}
 
+### MAIN PAGE ###
 @app.get("/")
 def read_root(request: Request):
     session = get_session(request)
-    return templates.TemplateResponse("index.html", {"request": request, "session": session})
 
-@app.get("/login")
-def login_page(request: Request):
-    session = get_session(request)
-    if session:
-        return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse("login.html", {"request": request, "session": session})
+    # Retrieve the error message from the cookie (if it exists)
+    error = request.cookies.get("booking_error")
 
-@app.post("/login")
-def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, is_admin FROM users WHERE username = ? AND password = ?", (username, password))
-    user = cursor.fetchone()
-    conn.close()
+    # Render the main page with the error message
+    response = templates.TemplateResponse("index.html", {
+        "request": request,
+        "session": session,
+        "error": error
+    })
 
-    if user:
-        session_token = serializer.dumps({"username": username, "user_id": user[0], "is_admin": bool(user[1])})
-        response = RedirectResponse("/", status_code=303)
-        response.set_cookie("session", session_token)
-        return response
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid username or password", "session": {}})
+    # Clear the error cookie after retrieving it
+    response.delete_cookie("booking_error")
 
-@app.get("/register")
-def register_page(request: Request):
-    session = get_session(request)
-    if session:
-        return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse("register.html", {"request": request, "session": session})
-
-@app.post("/register")
-def register(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    email: str = Form(...)
-):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    # Check for duplicate username
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-    if cursor.fetchone():
-        conn.close()
-        return templates.TemplateResponse("register.html", {"request": request, "error": "Username already exists", "session": {}})
-
-    # Check for duplicate email
-    cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-    if cursor.fetchone():
-        conn.close()
-        return templates.TemplateResponse("register.html", {"request": request, "error": "Email already exists", "session": {}})
-
-    # Insert new user
-    cursor.execute("""
-        INSERT INTO users (username, password, email)
-        VALUES (?, ?, ?)
-    """, (username, password, email))
-    conn.commit()
-    conn.close()
-    return RedirectResponse("/login", status_code=303)
-
-@app.get("/logout")
-def logout():
-    response = RedirectResponse("/", status_code=303)
-    response.delete_cookie("session")
     return response
-
-@app.get("/bookings")
-def view_bookings(request: Request):
-    session = get_session(request)
-    if not session:
-        return RedirectResponse("/login", status_code=303)
-
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    if session.get("is_admin"):
-        # Fetch all bookings with usernames for admin
-        cursor.execute("""
-            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery, u.username
-            FROM bookings b
-            JOIN scooters s ON b.scooter_id = s.id
-            JOIN users u ON b.user_id = u.id
-        """)
-        bookings = [
-            {
-                "id": row[0],
-                "scooter_id": row[1],
-                "status": row[2],
-                "expires_at": row[3],
-                "battery": row[4],
-                "username": row[5]
-            }
-            for row in cursor.fetchall()
-        ]
-    else:
-        # Fetch bookings for the logged-in user
-        user_id = session["user_id"]
-        cursor.execute("""
-            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery
-            FROM bookings b
-            JOIN scooters s ON b.scooter_id = s.id
-            WHERE b.user_id = ?
-        """, (user_id,))
-        bookings = [
-            {
-                "id": row[0],
-                "scooter_id": row[1],
-                "status": row[2],
-                "expires_at": row[3],
-                "battery": row[4]
-            }
-            for row in cursor.fetchall()
-        ]
-
-    conn.close()
-    return templates.TemplateResponse("bookings.html", {"request": request, "bookings": bookings, "session": session})
-
-@app.get("/feedback")
-def get_feedback(request: Request):
-    session = get_session(request)
-    if not session:
-        return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse("feedback.html", {
-        "request": request,
-        "session": session
-    })
-
-@app.post("/feedback")
-def post_feedback(request: Request, scooter_id: int = Form(None)):
-    session = get_session(request)
-    if not session:
-        return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse("feedback.html", {
-        "request": request,
-        "scooter_id": scooter_id,
-        "session": session
-    })
-
-@app.post("/submit-feedback")
-def submit_feedback(
-    request: Request,
-    name: str = Form(...), 
-    email: str = Form(...), 
-    rating: int = Form(...), 
-    comments: str = Form(...),
-    scooter_id: int = Form(None)
-):
-    session = get_session(request)
-    if not session:
-        return RedirectResponse("/login", status_code=303)
-
-    user_id = session["user_id"]
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO feedback (name, email, rating, comments, user_id, scooter_id)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (name, email, rating, comments, user_id, scooter_id))
-    conn.commit()
-    conn.close()
-    return RedirectResponse("/", status_code=303)
 
 @app.get("/scooter-locations")
 def get_markers():
@@ -263,7 +116,9 @@ def book_scooter(request: Request, scooter_id: int = Form(...)):
     row = cursor.fetchone()
     if not row or row[0]:
         conn.close()
-        return templates.TemplateResponse("index.html", {"request": request, "error": "Scooter is already booked", "session": session})
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie("booking_error", "Scooter is already booked")
+        return response
 
     # Mark the scooter as booked and create a pending booking
     created_at = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
@@ -279,10 +134,219 @@ def book_scooter(request: Request, scooter_id: int = Form(...)):
     except Exception as e:
         conn.rollback()
         conn.close()
-        return templates.TemplateResponse("index.html", {"request": request, "error": "Failed to book scooter", "session": session})
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie("booking_error", "Failed to book scooter")
+        return response
 
     conn.close()
     return RedirectResponse("/bookings", status_code=303)
+
+### LOGIN/REGISTER ###
+@app.get("/login")
+def login_page(request: Request):
+    session = get_session(request)
+    if session:
+        return RedirectResponse("/", status_code=303)
+
+    # Retrieve the error message from the cookie (if it exists)
+    error = request.cookies.get("login_error")
+
+    # Render the login page with the error message
+    response = templates.TemplateResponse("login.html", {"request": request, "session": session, "error": error})
+
+    # Clear the error cookie after retrieving it
+    response.delete_cookie("login_error")
+
+    return response
+
+@app.post("/login")
+def login(username: str = Form(...), password: str = Form(...)):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, is_admin FROM users WHERE username = ? AND password = ?", (username, password))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+        session_token = serializer.dumps({"username": username, "user_id": user[0], "is_admin": bool(user[1])})
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie("session", session_token)
+        return response
+
+    # Redirect to the login page and set an error message in a cookie
+    response = RedirectResponse("/login", status_code=303)
+    response.set_cookie("login_error", "Invalid username or password")
+    return response
+
+@app.get("/register")
+def register_page(request: Request):
+    session = get_session(request)
+    if session:
+        return RedirectResponse("/", status_code=303)
+
+    # Retrieve the error message from the cookie (if it exists)
+    error = request.cookies.get("register_error")
+
+    # Render the register page with the error message
+    response = templates.TemplateResponse("register.html", {"request": request, "session": session, "error": error})
+
+    # Clear the error cookie after retrieving it
+    response.delete_cookie("register_error")
+
+    return response
+
+@app.post("/register")
+def register(
+    username: str = Form(...),
+    password: str = Form(...),
+    email: str = Form(...)
+):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    # Check for duplicate username
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    if cursor.fetchone():
+        conn.close()
+        response = RedirectResponse("/register", status_code=303)
+        response.set_cookie("register_error", "Username already exists")
+        return response
+
+    # Check for duplicate email
+    cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+    if cursor.fetchone():
+        conn.close()
+        response = RedirectResponse("/register", status_code=303)
+        response.set_cookie("register_error", "Email already exists")
+        return response
+
+    # Insert new user
+    cursor.execute("""
+        INSERT INTO users (username, password, email)
+        VALUES (?, ?, ?)
+    """, (username, password, email))
+    conn.commit()
+    conn.close()
+    return RedirectResponse("/login", status_code=303)
+
+@app.get("/logout")
+def logout():
+    response = RedirectResponse("/", status_code=303)
+    response.delete_cookie("session")
+    return response
+
+### FEEDBACK ###
+@app.get("/feedback")
+def get_feedback(request: Request):
+    session = get_session(request)
+    if not session:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse("feedback.html", {
+        "request": request,
+        "session": session
+    })
+
+@app.post("/feedback")
+def post_feedback(request: Request, scooter_id: int = Form(None)):
+    session = get_session(request)
+    if not session:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse("feedback.html", {
+        "request": request,
+        "scooter_id": scooter_id,
+        "session": session
+    })
+
+@app.post("/submit-feedback")
+def submit_feedback(
+    request: Request,
+    name: str = Form(...), 
+    email: str = Form(...), 
+    rating: int = Form(...), 
+    comments: str = Form(...),
+    scooter_id: int = Form(None)
+):
+    session = get_session(request)
+    if not session:
+        return RedirectResponse("/login", status_code=303)
+
+    user_id = session["user_id"]
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO feedback (name, email, rating, comments, user_id, scooter_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (name, email, rating, comments, user_id, scooter_id))
+    conn.commit()
+    conn.close()
+    return RedirectResponse("/", status_code=303)
+
+### BOOKINGS ###
+@app.get("/bookings")
+def view_bookings(request: Request):
+    session = get_session(request)
+    if not session:
+        return RedirectResponse("/login", status_code=303)
+
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+
+    if session.get("is_admin"):
+        # Fetch all bookings with usernames for admin
+        cursor.execute("""
+            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery, u.username
+            FROM bookings b
+            JOIN scooters s ON b.scooter_id = s.id
+            JOIN users u ON b.user_id = u.id
+        """)
+        bookings = [
+            {
+                "id": row[0],
+                "scooter_id": row[1],
+                "status": row[2],
+                "expires_at": row[3],
+                "battery": row[4],
+                "username": row[5]
+            }
+            for row in cursor.fetchall()
+        ]
+    else:
+        # Fetch bookings for the logged-in user
+        user_id = session["user_id"]
+        cursor.execute("""
+            SELECT b.id, b.scooter_id, b.status, b.expires_at, s.battery
+            FROM bookings b
+            JOIN scooters s ON b.scooter_id = s.id
+            WHERE b.user_id = ?
+        """, (user_id,))
+        bookings = [
+            {
+                "id": row[0],
+                "scooter_id": row[1],
+                "status": row[2],
+                "expires_at": row[3],
+                "battery": row[4]
+            }
+            for row in cursor.fetchall()
+        ]
+
+    conn.close()
+
+    # Retrieve the error message from the cookie (if it exists)
+    error = request.cookies.get("bookings_error")
+
+    # Render the bookings page with the error message
+    response = templates.TemplateResponse("bookings.html", {
+        "request": request,
+        "bookings": bookings,
+        "session": session,
+        "error": error
+    })
+
+    # Clear the error cookie after retrieving it
+    response.delete_cookie("bookings_error")
+
+    return response
 
 @app.post("/activate-booking")
 async def activate_booking(request: Request, booking_id: int = Form(...)):
@@ -302,7 +366,9 @@ async def activate_booking(request: Request, booking_id: int = Form(...)):
     booking = cursor.fetchone()
     if not booking:
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": "Booking not found", "session": session})
+        response = RedirectResponse("/bookings", status_code=303)
+        response.set_cookie("bookings_error", "Booking not found")
+        return response
 
     expires_at = TIMEZONE.localize(datetime.strptime(booking[0], "%Y-%m-%d %H:%M:%S"))
     activated_at = TIMEZONE.localize(datetime.strptime(datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"))
@@ -311,7 +377,9 @@ async def activate_booking(request: Request, booking_id: int = Form(...)):
     # Compare expires_at with the current time
     if expires_at < activated_at:
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": "Booking has expired or is invalid", "session": session})
+        response = RedirectResponse("/bookings", status_code=303)
+        response.set_cookie("bookings_error", "Booking has expired or is invalid")
+        return response
 
     try:
         cursor.execute("BEGIN TRANSACTION")
@@ -320,16 +388,19 @@ async def activate_booking(request: Request, booking_id: int = Form(...)):
             SET status = 'active', activated_at = ?
             WHERE id = ?
         """, (activated_at.strftime("%Y-%m-%d %H:%M:%S"), booking_id))
-        conn.commit()
 
         # Send MQTT start command
         response = await send_command(scooter_id, "start")
         if response != "activated":
             raise Exception("Failed to activate scooter via MQTT")
+        
+        conn.commit()
     except Exception as e:
         conn.rollback()
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": str(e), "session": session})
+        response = RedirectResponse("/bookings", status_code=303)
+        response.set_cookie("bookings_error", str(e))
+        return response
 
     conn.close()
     return RedirectResponse("/bookings", status_code=303)
@@ -352,42 +423,57 @@ async def delete_booking(request: Request, booking_id: int = Form(...)):
     booking = cursor.fetchone()
     if not booking:
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": "Booking not found", "session": session})
+        response = RedirectResponse("/bookings", status_code=303)
+        response.set_cookie("bookings_error", "Booking not found")
+        return response
 
     scooter_id, status, activated_at = booking
+
+    # Boolean to check if the ride was finished
+    ride_finished = False
 
     try:
         cursor.execute("BEGIN TRANSACTION")
         cursor.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
         cursor.execute("UPDATE scooters SET isBooked = 0 WHERE id = ?", (scooter_id,))
-        conn.commit()
 
         # Send MQTT stop command if the booking was active
         if status == "active":
             response = await send_command(scooter_id, "stop")
-            if response != "parked":
+            if response not in ("parked", "parked_add_fare"):
                 raise Exception("Failed to stop scooter via MQTT")
+            ride_finished = True
+            
+        conn.commit()
     except Exception as e:
         conn.rollback()
         conn.close()
-        return templates.TemplateResponse("bookings.html", {"request": request, "error": str(e), "session": session})
+        response = RedirectResponse("/bookings", status_code=303)
+        response.set_cookie("bookings_error", str(e))
+        return response
 
     conn.close()
 
     # If the ride was active, calculate receipt details and render a form to submit to /receipt
-    if status == "active" and activated_at:
+    if status == "active" and ride_finished:
         activated_at = TIMEZONE.localize(datetime.strptime(activated_at, "%Y-%m-%d %H:%M:%S"))
         stopped_at = TIMEZONE.localize(datetime.strptime(datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"))
         duration_minutes = (stopped_at - activated_at).total_seconds() // 60
         duration_seconds = (stopped_at - activated_at).total_seconds() % 60
-        cost = duration_minutes * 5
+        cost = duration_minutes * 2.5
+        parking_fee = 0
+
+        if response == "parked_add_fare":
+            parking_fee = 10
 
         # Render a form to submit the receipt data
         html_content = f"""
         <form id="receipt-form" method="post" action="/receipt">
             <input type="hidden" name="scooter_id" value="{scooter_id}">
             <input type="hidden" name="duration" value="{int(duration_minutes)} minutes and {int(duration_seconds)} seconds">
-            <input type="hidden" name="cost" value="{cost:.0f},- NOK">
+            <input type="hidden" name="cost" value="{cost:.1f} NOK">
+            <input type="hidden" name="parking_fee" value="{parking_fee:.0f},- NOK">
+            <input type="hidden" name="total_cost" value="{cost + parking_fee:.1f} NOK">
         </form>
         <script>
             document.getElementById('receipt-form').submit();
@@ -411,6 +497,7 @@ def receipt_page(request: Request, scooter_id: int = Form(...), duration: str = 
         "session": session
     })
 
+### ADMIN PAGE ###
 @app.get("/admin/maintenance")
 def scooters_needing_fix(request: Request):
     session = get_session(request)

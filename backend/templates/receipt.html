@@ -40,7 +40,10 @@
         <div class="booking-card">
             <p><strong>Scooter ID:</strong> {{ scooter_id }}</p>
             <p><strong>Ride Duration:</strong> {{ duration }}</p>
-            <p><strong>Total Cost:</strong> {{ cost }}</p>
+            <p><strong>Ride Cost:</strong> {{ cost }}</p>
+            <p><strong>Parking Fee:</strong> {{ parking_fee }}</p>
+            <p><strong>Total Cost:</strong> {{ total_cost }}</p>
+            
             <form method="post" action="/feedback" class="inline-form">
                 <input type="hidden" name="scooter_id" value="{{ scooter_id }}">
                 <button type="submit" class="btn btn-green">Give Feedback</button>
