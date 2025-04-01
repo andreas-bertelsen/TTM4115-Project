@@ -49,6 +49,7 @@ class ScooterLogic:
     def check_orientation_collision(self):
         """ Check the orientation of the scooter after a collision. """
         orientation = check_orientation()
+        print(f"Orientation after collision: {orientation}")
         if orientation == GREEN:
             return "Active"
         return "Collision_detected"

@@ -33,13 +33,10 @@ def check_orientation():
     pitch = (pitch + 180) % 360 - 180
 
     if abs(roll) < 10 and abs(pitch) < 10:  
-        print("Upright")
         return GREEN  # Upright
     elif abs(roll) < 30 and abs(pitch) < 30:  
-        print("Slight tilt")
         return YELLOW  # Slight tilt
     else:  
-        print("Significant tilt")
         return RED  # Significant tilt
 
 def set_led_matrix(color):
