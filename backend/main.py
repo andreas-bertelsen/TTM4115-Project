@@ -602,7 +602,7 @@ async def delete_booking(request: Request, booking_id: int = Form(...)):
         stopped_at = TIMEZONE.localize(datetime.strptime(datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"))
         duration_minutes = (stopped_at - activated_at).total_seconds() // 60
         duration_seconds = (stopped_at - activated_at).total_seconds() % 60
-        cost = duration_minutes * 2.5
+        cost = duration_minutes * 2.5 + 2.5
         parking_fee = 0
 
         if response == "parked_increased_fare":
