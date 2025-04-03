@@ -15,11 +15,28 @@ mqtt_port = 1883
 mqtt_responses = {}
 
 def on_connect(client: Client, userdata, flags, rc):
+    """
+    Callback for when the client connects to the MQTT broker.
+
+    Args:
+        client (Client): The MQTT client instance.
+        userdata: User-defined data.
+        flags: Response flags sent by the broker.
+        rc: Connection result.
+    """
     print("Connected to MQTT broker")
     # Subscribe to the status topic
     client.subscribe("team20/scooter/status/#")
 
 def on_message(client, userdata, msg: MQTTMessage):
+    """
+    Callback for when a message is received from the MQTT broker.
+
+    Args:
+        client (Client): The MQTT client instance.
+        userdata: User-defined data.
+        msg (MQTTMessage): The received message.
+    """
     topic = msg.topic
     payload = msg.payload.decode()
     print(f"Received message on topic {topic}: {payload}")
@@ -59,7 +76,14 @@ mqtt_client.loop_start()
 
 async def send_command(scooter_id, command):
     """
-    Send a start or stop command to the scooter and wait for a response.
+    Send a command to a scooter and wait for a response.
+
+    Args:
+        scooter_id (int): The ID of the scooter.
+        command (str): The command to send.
+
+    Returns:
+        str or None: The response from the scooter, or None if no response is received.
     """
     topic = f"team20/scooter/command/{scooter_id}"
     mqtt_client.publish(topic, command)

@@ -47,6 +47,15 @@ def get_session(request: Request):
 ### MAIN PAGE ###
 @app.get("/")
 def read_root(request: Request):
+    """
+    Render the main page.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered main page.
+    """
     session = get_session(request)
 
     # Retrieve the error message from the cookie (if it exists)
@@ -66,6 +75,12 @@ def read_root(request: Request):
 
 @app.get("/scooter-locations")
 def get_markers():
+    """
+    Retrieve scooter locations.
+
+    Returns:
+        JSONResponse: A list of scooter locations.
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("SELECT id, lat, lng, isBooked, needs_fixing FROM scooters")
@@ -84,6 +99,15 @@ def get_markers():
 
 @app.get("/scooter-data")
 def get_marker_info(id: int):
+    """
+    Retrieve detailed information about a specific scooter.
+
+    Args:
+        id (int): The ID of the scooter.
+
+    Returns:
+        JSONResponse: Scooter details or an error message.
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM scooters WHERE id = ?", (id,))
@@ -103,6 +127,16 @@ def get_marker_info(id: int):
 
 @app.post("/book-scooter")
 def book_scooter(request: Request, scooter_id: int = Form(...)):
+    """
+    Book a scooter.
+
+    Args:
+        request (Request): The HTTP request object.
+        scooter_id (int): The ID of the scooter to book.
+
+    Returns:
+        RedirectResponse: Redirects to the bookings page or the main page with an error.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -144,6 +178,15 @@ def book_scooter(request: Request, scooter_id: int = Form(...)):
 ### LOGIN/REGISTER ###
 @app.get("/login")
 def login_page(request: Request):
+    """
+    Render the login page.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered login page.
+    """
     session = get_session(request)
     if session:
         return RedirectResponse("/", status_code=303)
@@ -161,6 +204,16 @@ def login_page(request: Request):
 
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
+    """
+    Handle user login.
+
+    Args:
+        username (str): The username of the user.
+        password (str): The password of the user.
+
+    Returns:
+        RedirectResponse: Redirects to the main page or the login page with an error.
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("SELECT id, is_admin FROM users WHERE username = ? AND password = ?", (username, password))
@@ -180,6 +233,15 @@ def login(username: str = Form(...), password: str = Form(...)):
 
 @app.get("/register")
 def register_page(request: Request):
+    """
+    Render the registration page.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered registration page.
+    """
     session = get_session(request)
     if session:
         return RedirectResponse("/", status_code=303)
@@ -201,6 +263,17 @@ def register(
     password: str = Form(...),
     email: str = Form(...)
 ):
+    """
+    Handle user registration.
+
+    Args:
+        username (str): The username of the user.
+        password (str): The password of the user.
+        email (str): The email of the user.
+
+    Returns:
+        RedirectResponse: Redirects to the login page or the registration page with an error.
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
@@ -231,6 +304,12 @@ def register(
 
 @app.get("/logout")
 def logout():
+    """
+    Handle user logout.
+
+    Returns:
+        RedirectResponse: Redirects to the main page.
+    """
     response = RedirectResponse("/", status_code=303)
     response.delete_cookie("session")
     return response
@@ -238,6 +317,15 @@ def logout():
 ### FEEDBACK ###
 @app.get("/feedback")
 def get_feedback(request: Request):
+    """
+    Render the feedback page.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered feedback page.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -248,6 +336,16 @@ def get_feedback(request: Request):
 
 @app.post("/feedback")
 def post_feedback(request: Request, scooter_id: int = Form(None)):
+    """
+    Render the feedback page with a specific scooter ID.
+
+    Args:
+        request (Request): The HTTP request object.
+        scooter_id (int): The ID of the scooter.
+
+    Returns:
+        TemplateResponse: The rendered feedback page.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -266,6 +364,20 @@ def submit_feedback(
     comments: str = Form(...),
     scooter_id: int = Form(None)
 ):
+    """
+    Submit feedback.
+
+    Args:
+        request (Request): The HTTP request object.
+        name (str): The name of the user.
+        email (str): The email of the user.
+        rating (int): The rating given by the user.
+        comments (str): The comments provided by the user.
+        scooter_id (int): The ID of the scooter.
+
+    Returns:
+        RedirectResponse: Redirects to the main page.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -284,6 +396,15 @@ def submit_feedback(
 ### BOOKINGS ###
 @app.get("/bookings")
 def view_bookings(request: Request):
+    """
+    Render the bookings page.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered bookings page.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -350,6 +471,16 @@ def view_bookings(request: Request):
 
 @app.post("/activate-booking")
 async def activate_booking(request: Request, booking_id: int = Form(...)):
+    """
+    Activate a booking.
+
+    Args:
+        request (Request): The HTTP request object.
+        booking_id (int): The ID of the booking to activate.
+
+    Returns:
+        RedirectResponse: Redirects to the bookings page or the bookings page with an error.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -407,6 +538,16 @@ async def activate_booking(request: Request, booking_id: int = Form(...)):
 
 @app.post("/delete-booking")
 async def delete_booking(request: Request, booking_id: int = Form(...)):
+    """
+    Delete a booking.
+
+    Args:
+        request (Request): The HTTP request object.
+        booking_id (int): The ID of the booking to delete.
+
+    Returns:
+        RedirectResponse: Redirects to the bookings page or the bookings page with an error.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -493,6 +634,20 @@ def receipt_page(
     parking_fee: str = Form(...),
     total_cost: str = Form(...)
 ):
+    """
+    Render the receipt page.
+
+    Args:
+        request (Request): The HTTP request object.
+        scooter_id (int): The ID of the scooter.
+        duration (str): The duration of the ride.
+        cost (str): The cost of the ride.
+        parking_fee (str): The parking fee.
+        total_cost (str): The total cost.
+
+    Returns:
+        TemplateResponse: The rendered receipt page.
+    """
     session = get_session(request)
     if not session:
         return RedirectResponse("/login", status_code=303)
@@ -510,6 +665,15 @@ def receipt_page(
 ### ADMIN PAGE ###
 @app.get("/admin/maintenance")
 def scooters_needing_fix(request: Request):
+    """
+    Render the maintenance page for scooters needing fixing.
+
+    Args:
+        request (Request): The HTTP request object.
+
+    Returns:
+        TemplateResponse: The rendered maintenance page.
+    """
     session = get_session(request)
     if not session or not session.get("is_admin"):
         return RedirectResponse("/", status_code=303)
@@ -541,6 +705,16 @@ def scooters_needing_fix(request: Request):
 
 @app.post("/admin/fix-scooter")
 async def fix_scooter(request: Request, scooter_id: int = Form(...)):
+    """
+    Fix a scooter.
+
+    Args:
+        request (Request): The HTTP request object.
+        scooter_id (int): The ID of the scooter to fix.
+
+    Returns:
+        RedirectResponse: Redirects to the maintenance page or the maintenance page with an error.
+    """
     session = get_session(request)
     if not session or not session.get("is_admin"):
         return RedirectResponse("/", status_code=303)
@@ -569,6 +743,11 @@ async def fix_scooter(request: Request, scooter_id: int = Form(...)):
     return RedirectResponse("/admin/maintenance", status_code=303)
 
 def main():
+    """
+    Main entry point for the backend application.
+
+    Initializes the database and starts the FastAPI server.
+    """
     initialize_database()
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 

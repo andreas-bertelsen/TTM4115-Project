@@ -5,6 +5,9 @@ import sqlite3
 DATABASE = "scooter_app.db"
 
 def initialize_database():
+    """
+    Initialize the SQLite database with required tables and initial data.
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 

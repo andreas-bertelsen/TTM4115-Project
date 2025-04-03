@@ -13,6 +13,12 @@ TIMEZONE = pytz.timezone("Europe/Oslo")
 # Lifespan context manager for startup and shutdown tasks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Context manager for managing the application's lifespan.
+
+    Args:
+        app (FastAPI): The FastAPI application instance.
+    """
     async def cleanup_expired_bookings():
         """
         Periodically clean up expired bookings and free up scooters.

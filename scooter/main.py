@@ -8,6 +8,11 @@ from scooter_handler import ScooterLogic, create_state_machine
 from sense_hat_handler import set_led_matrix
 
 def main():
+    """
+    Main entry point for the scooter system.
+
+    Sets up the state machine, MQTT client, and collision monitoring.
+    """
     # State Machine Setup
     scooter = ScooterLogic()
     stm = create_state_machine(scooter)
